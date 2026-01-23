@@ -1,3 +1,5 @@
+#use the gesture_reconizer.task
+
 SAMPLE 1
 
 import cv2
