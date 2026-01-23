@@ -1,0 +1,98 @@
+SAMPLE 1
+
+import cv2
+import mediapipe as mp
+
+# Initialize video capture and Mediapipe Hands
+cap = cv2.VideoCapture(0)
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
+mp_draw = mp.solutions.drawing_utils
+
+while cap.isOpened():
+    success, img = cap.read()
+    if not success:
+        print("Failed to capture video")
+        break
+
+    # Convert the BGR image to RGB for Mediapipe processing
+    imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    results = hands.process(imgRGB)
+
+    # Check if any hands are detected
+    if results.multi_hand_landmarks:
+        for hand_landmarks in results.multi_hand_landmarks:
+            height, width, _ = img.shape
+
+            # Get coordinates of relevant landmarks
+            thumb_tip = hand_landmarks.landmark[4]  # Thumb tip
+            thumb_base = hand_landmarks.landmark[1]  # Thumb base (near wrist)
+            wrist = hand_landmarks.landmark[0]  # Wrist
+
+            # Convert normalized coordinates to pixel coordinates
+            thumb_tip_coords = (int(thumb_tip.x * width), int(thumb_tip.y * height))
+            thumb_base_coords = (int(thumb_base.x * width), int(thumb_base.y * height))
+            wrist_coords = (int(wrist.x * width), int(wrist.y * height))
+
+            # Check for thumbs-up or thumbs-down
+            thumb_tip_y = thumb_tip.y * height
+            wrist_y = wrist.y * height
+
+            if thumb_tip_y < wrist_y:  # Thumb tip above wrist: Thumbs up
+                cv2.putText(img, "Thumbs Up!", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            elif thumb_tip_y > wrist_y:  # Thumb tip below wrist: Thumbs down
+                cv2.putText(img, "Thumbs Down!", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
+            # Draw landmarks and connections
+            mp_draw.draw_landmarks(img, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+    # Display the image
+    cv2.imshow("Thumbs Up/Down Detection", img)
+
+    # Exit on pressing 'q'
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# Release resources
+cap.release()
+cv2.destroyAllWindows()
+_____________________________________________________________________________________________________________________
+SAMPLE 2
+
+import cv2
+import mediapipe as mp
+
+cap = cv2.VideoCapture(0)
+
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(
+    static_image_mode=False,
+    max_num_hands=2,
+    min_detection_confidence=0.7,
+    min_tracking_confidence=0.7
+)
+
+mp_draw = mp.solutions.drawing_utils
+
+while True:
+    success, img = cap.read()
+    if not success:
+        break
+
+    imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    results = hands.process(imgRGB)
+
+    if results.multi_hand_landmarks:
+        for hand_landmarks in results.multi_hand_landmarks:
+            mp_draw.draw_landmarks(
+                img, hand_landmarks, mp_hands.HAND_CONNECTIONS
+            )
+
+    cv2.imshow("Hand Tracking", img)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+_____________________________________________________________________________________________________
