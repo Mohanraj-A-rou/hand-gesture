@@ -1,4 +1,4 @@
-#use the gesture_reconizer.task 
+#use with the 3rd file named "gesture_reconizer.task"
 
 import cv2
 import mediapipe as mp
