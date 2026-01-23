@@ -1,0 +1,66 @@
+import cv2
+import mediapipe as mp
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
+from pushbullet import Pushbullet
+import time
+
+# ---------------- Pushbullet Setup ----------------
+API_KEY = "o.4pvJUNlR4lbz7347m3ZZFkZnUNOGIAWX"
+pb = Pushbullet(API_KEY)
+
+# ---------------- Mediapipe Setup -----------------
+model_path = "gesture_recognizer.task"
+
+BaseOptions = python.BaseOptions
+GestureRecognizer = vision.GestureRecognizer
+GestureRecognizerOptions = vision.GestureRecognizerOptions
+VisionRunningMode = vision.RunningMode
+
+options = GestureRecognizerOptions(
+    base_options=BaseOptions(model_asset_path=model_path),
+    running_mode=VisionRunningMode.IMAGE
+)
+
+recognizer = GestureRecognizer.create_from_options(options)
+
+# ---------------- Camera Setup --------------------
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+
+last_gesture = None
+last_sent_time = 0
+cooldown = 2   # seconds between notifications
+
+while True:
+    success, frame = cap.read()
+    if not success:
+        break
+
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
+
+    result = recognizer.recognize(mp_image)
+
+    gesture_text = "No Gesture"
+
+    if result.gestures:
+        gesture_text = result.gestures[0][0].category_name
+
+        # ---- Pushbullet Notification Logic ----
+        current_time = time.time()
+
+        if (gesture_text != last_gesture) and (current_time - last_sent_time > cooldown):
+            pb.push_note("Hand Gesture Detected", f"Gesture: {gesture_text}")
+            last_gesture = gesture_text
+            last_sent_time = current_time
+
+    cv2.putText(frame, f"Gesture: {gesture_text}", (20, 50),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
+
+    cv2.imshow("Advanced Gesture Recognition", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
